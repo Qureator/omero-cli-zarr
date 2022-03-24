@@ -36,7 +36,10 @@ def image_to_zarr(image: omero.gateway.ImageWrapper, args: argparse.Namespace) -
 
 
 def add_image(
-    image: omero.gateway.ImageWrapper, parent: Group, cache_dir: Optional[str] = None
+    image: omero.gateway.ImageWrapper,
+    parent: Group, 
+    cache_dir: Optional[str] = None, 
+    chunk_size: Union[None, int, Tuple[int, int]] = None,
 ) -> Tuple[int, List[Dict[str, Any]]]:
     """Adds an OMERO image pixel data as array to the given parent zarr group.
     Optionally caches the pixel data in the given cache_dir directory.
@@ -93,6 +96,7 @@ def add_image(
         level_count=level_count,
         cache_dir=cache_dir,
         cache_file_name_func=get_cache_filename,
+        chunk_size=chunk_size,
     )
 
     axes = marshal_axes(image)
