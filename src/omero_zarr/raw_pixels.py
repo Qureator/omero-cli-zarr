@@ -1,7 +1,7 @@
 import argparse
 import os
 import time
-from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Union
 
 import numpy
 import numpy as np
@@ -24,19 +24,26 @@ from .util import marshal_axes, marshal_transformations, open_store, print_statu
 def image_to_zarr(image: omero.gateway.ImageWrapper, args: argparse.Namespace) -> None:
     target_dir = args.output
     cache_dir = target_dir if args.cache_numpy else None
+    try:
+        chunk_size = int(args.chunk_size)
+    except TypeError:
+        chunk_size  = None
 
     name = os.path.join(target_dir, "%s.zarr" % image.id)
     print(f"Exporting to {name} ({VERSION})")
     store = open_store(name)
     root = open_group(store)
-    add_image(image, root, cache_dir=cache_dir)
+    add_image(image, root, cache_dir=cache_dir, chunk_size=chunk_size)
     add_omero_metadata(root, image)
     add_toplevel_metadata(root)
     print("Finished.")
 
 
 def add_image(
-    image: omero.gateway.ImageWrapper, parent: Group, cache_dir: Optional[str] = None
+    image: omero.gateway.ImageWrapper,
+    parent: Group, 
+    cache_dir: Optional[str] = None, 
+    chunk_size: Union[None, int, Tuple[int, int]] = None,
 ) -> Tuple[int, List[Dict[str, Any]]]:
     """Adds an OMERO image pixel data as array to the given parent zarr group.
     Optionally caches the pixel data in the given cache_dir directory.
@@ -93,6 +100,7 @@ def add_image(
         level_count=level_count,
         cache_dir=cache_dir,
         cache_file_name_func=get_cache_filename,
+        chunk_size=chunk_size,
     )
 
     axes = marshal_axes(image)
@@ -118,6 +126,7 @@ def add_raw_image(
     level_count: int,
     cache_dir: Optional[str] = None,
     cache_file_name_func: Callable[[int, int, int], str] = None,
+    chunk_size: Union[None, int, Tuple[int, int]] = None,
 ) -> List[str]:
     """Adds the raw image pixel data as array to the given parent zarr group.
     Optionally caches the pixel data in the given cache_dir directory.
@@ -134,6 +143,9 @@ def add_raw_image(
     else:
         cache = False
         cache_dir = ""
+
+    if type(chunk_size) == int:
+        chunk_size = (chunk_size, chunk_size)
 
     dims = [dim for dim in [size_t, size_c, size_z] if dim != 1]
 
@@ -166,7 +178,7 @@ def add_raw_image(
                             parent.create(
                                 path,
                                 shape=tuple(dims + [size_y, size_x]),
-                                chunks=tuple([1] * len(dims) + [size_y, size_x]),
+                                chunks=tuple([1] * len(dims)) + ((size_y, size_x) if chunk_size is None else chunk_size),
                                 dtype=d_type,
                             )
                         )
@@ -224,6 +236,11 @@ def plate_to_zarr(plate: omero.gateway._PlateWrapper, args: argparse.Namespace) 
     target_dir = args.output
     cache_dir = target_dir if args.cache_numpy else None
     name = os.path.join(target_dir, "%s.zarr" % plate.id)
+    try:
+        chunk_size = int(args.chunk_size)
+    except TypeError:
+        chunk_size  = None
+
     store = open_store(name)
     print(f"Exporting to {name} ({VERSION})")
     root = open_group(store)
@@ -262,7 +279,7 @@ def plate_to_zarr(plate: omero.gateway._PlateWrapper, args: argparse.Namespace) 
                 row_group = root.require_group(row)
                 col_group = row_group.require_group(col)
                 field_group = col_group.require_group(field_name)
-                add_image(img, field_group, cache_dir=cache_dir)
+                add_image(img, field_group, cache_dir=cache_dir, chunk_size=chunk_size)
                 add_omero_metadata(field_group, img)
                 # Update Well metadata after each image
                 write_well_metadata(col_group, fields)

@@ -221,6 +221,11 @@ class ZarrControl(BaseControl):
             help="Maximum number of workers (only for use with bioformats2raw)",
         )
         export.add_argument(
+            "--chunk_size",
+            default=None,
+            help="Chunk size of a zarr array for a plane (not for use with bioformats2raw)",
+        )
+        export.add_argument(
             "object",
             type=ProxyStringType("Image"),
             help="The Image to export.",
