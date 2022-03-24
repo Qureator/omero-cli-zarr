@@ -24,12 +24,16 @@ from .util import marshal_axes, marshal_transformations, open_store, print_statu
 def image_to_zarr(image: omero.gateway.ImageWrapper, args: argparse.Namespace) -> None:
     target_dir = args.output
     cache_dir = target_dir if args.cache_numpy else None
+    try:
+        chunk_size = int(args.chunk_size)
+    except TypeError:
+        chunk_size  = None
 
     name = os.path.join(target_dir, "%s.zarr" % image.id)
     print(f"Exporting to {name} ({VERSION})")
     store = open_store(name)
     root = open_group(store)
-    add_image(image, root, cache_dir=cache_dir)
+    add_image(image, root, cache_dir=cache_dir, chunk_size=chunk_size)
     add_omero_metadata(root, image)
     add_toplevel_metadata(root)
     print("Finished.")
@@ -232,6 +236,11 @@ def plate_to_zarr(plate: omero.gateway._PlateWrapper, args: argparse.Namespace) 
     target_dir = args.output
     cache_dir = target_dir if args.cache_numpy else None
     name = os.path.join(target_dir, "%s.zarr" % plate.id)
+    try:
+        chunk_size = int(args.chunk_size)
+    except TypeError:
+        chunk_size  = None
+
     store = open_store(name)
     print(f"Exporting to {name} ({VERSION})")
     root = open_group(store)
@@ -270,7 +279,7 @@ def plate_to_zarr(plate: omero.gateway._PlateWrapper, args: argparse.Namespace) 
                 row_group = root.require_group(row)
                 col_group = row_group.require_group(col)
                 field_group = col_group.require_group(field_name)
-                add_image(img, field_group, cache_dir=cache_dir)
+                add_image(img, field_group, cache_dir=cache_dir, chunk_size=chunk_size)
                 add_omero_metadata(field_group, img)
                 # Update Well metadata after each image
                 write_well_metadata(col_group, fields)
