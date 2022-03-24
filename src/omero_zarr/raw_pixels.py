@@ -269,16 +269,18 @@ def plate_to_zarr(plate: omero.gateway._PlateWrapper, args: argparse.Namespace) 
                 max_fields = max(max_fields, field + 1)
             print_status(int(t0), int(time.time()), count, total)
 
-        # Update plate_metadata after each Well
-        write_plate_metadata(
-            root,
-            row_names,
-            col_names,
-            wells=list(well_paths),
-            field_count=max_fields,
-            acquisitions=plate_acq,
-            name=plate.name,
-        )
+    if len(well_paths) == 0:
+        raise ValueError("Empty wells list")
+
+    write_plate_metadata(
+        root,
+        row_names,
+        col_names,
+        wells=list(well_paths),
+        field_count=max_fields,
+        acquisitions=plate_acq,
+        name=plate.name,
+    )
 
     add_toplevel_metadata(root)
     print("Finished.")
