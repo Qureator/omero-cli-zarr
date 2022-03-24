@@ -248,11 +248,11 @@ def plate_to_zarr(plate: omero.gateway._PlateWrapper, args: argparse.Namespace) 
         col = plate.getColumnLabels()[well.column]
         fields = []
         for field in range(n_fields[0], n_fields[1] + 1):
+            count += 1
             ws = well.getWellSample(field)
             if ws and ws.getImage():
                 ac = ws.getPlateAcquisition()
                 field_name = "%d" % field
-                count += 1
                 img = ws.getImage()
                 well_paths.add(f"{row}/{col}")
                 field_info = {"path": f"{field_name}"}
