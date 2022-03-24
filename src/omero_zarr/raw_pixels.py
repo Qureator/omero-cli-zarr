@@ -1,7 +1,7 @@
 import argparse
 import os
 import time
-from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Union
 
 import numpy
 import numpy as np
@@ -118,6 +118,7 @@ def add_raw_image(
     level_count: int,
     cache_dir: Optional[str] = None,
     cache_file_name_func: Callable[[int, int, int], str] = None,
+    chunk_size: Union[None, int, Tuple[int, int]] = None,
 ) -> List[str]:
     """Adds the raw image pixel data as array to the given parent zarr group.
     Optionally caches the pixel data in the given cache_dir directory.
@@ -134,6 +135,9 @@ def add_raw_image(
     else:
         cache = False
         cache_dir = ""
+
+    if type(chunk_size) == int:
+        chunk_size = (chunk_size, chunk_size)
 
     dims = [dim for dim in [size_t, size_c, size_z] if dim != 1]
 
@@ -166,7 +170,7 @@ def add_raw_image(
                             parent.create(
                                 path,
                                 shape=tuple(dims + [size_y, size_x]),
-                                chunks=tuple([1] * len(dims) + [size_y, size_x]),
+                                chunks=tuple([1] * len(dims)) + ((size_y, size_x) if chunk_size is None else chunk_size),
                                 dtype=d_type,
                             )
                         )
